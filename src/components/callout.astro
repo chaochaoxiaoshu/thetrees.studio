@@ -1,0 +1,13 @@
+---
+import { cva } from 'class-variance-authority'
+
+interface Props {
+  type: 'info' | 'warning' | 'error' | 'success'
+}
+
+const { type } = Astro.props
+
+const classes = cva({})
+---
+
+<div class='flex items-start p-4 rounded-md'></div>

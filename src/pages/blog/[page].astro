@@ -25,7 +25,7 @@ export async function getStaticPaths({
 const { page } = Astro.props
 ---
 
-<Layout>
+<Layout title='Blog'>
   <div class='container'>
     <nav aria-label='Breadcrumb'>
       <Breadcrumb>
@@ -38,7 +38,7 @@ const { page } = Astro.props
           <BreadcrumbSeparator />
           <BreadcrumbItem>
             <BreadcrumbLink
-              href='/blog'
+              href='/blog/1'
               className='flex items-center gap-2'
               aria-label='Blog'
             >

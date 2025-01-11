@@ -1,6 +1,7 @@
 ---
 import dayjs from 'dayjs'
 import { getCollection, render } from 'astro:content'
+import { Image } from 'astro:assets'
 import Layout from '@/layouts/Layout.astro'
 import PostNavigation from '@/components/post-navigation'
 import { Avatar } from '@/components/ui/avatar'
@@ -42,7 +43,7 @@ const { post, prevPost, nextPost } = Astro.props
 const { Content } = await render(post)
 ---
 
-<Layout>
+<Layout title={post.data.title} description={post.data.description}>
   <nav class='container' aria-label='Breadcrumb'>
     <Breadcrumb>
       <BreadcrumbList>
@@ -53,7 +54,7 @@ const { Content } = await render(post)
         </BreadcrumbItem>
         <BreadcrumbSeparator />
         <BreadcrumbItem>
-          <BreadcrumbLink href='/blog' className='flex items-center gap-2'>
+          <BreadcrumbLink href='/blog/1' className='flex items-center gap-2'>
             <BookOpen className='size-4' />
             <span>Blog</span>
           </BreadcrumbLink>
@@ -69,10 +70,12 @@ const { Content } = await render(post)
   </nav>
   <div class='px-5 mx-auto w-full max-w-[1000px]'>
     <div class='relative aspect-video'>
-      <img
+      <Image
         src={post.data.cover}
-        alt='Post cover image'
+        alt={post.data.title}
         class='absolute inset-0 w-full h-full rounded-xl object-cover'
+        inferSize
+        loading='eager'
       />
     </div>
   </div>

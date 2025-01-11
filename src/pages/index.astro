@@ -15,7 +15,7 @@ import logoTileBg from '@/assets/logo_tile_bg.png'
 
 <Layout>
   <div
-    class='px-4 max-w-[375px] md:max-w-screen-md mx-auto grid grid-cols-1 md:grid-cols-3 md:grid-rows-2 gap-4'
+    class='px-5 max-w-[375px] md:max-w-screen-md mx-auto grid grid-cols-1 md:grid-cols-3 md:grid-rows-2 gap-4'
   >
     <HomeCard
       className='aspect-square md:aspect-auto md:h-full md:col-span-2 md:row-span-1 relative'
@@ -25,6 +25,7 @@ import logoTileBg from '@/assets/logo_tile_bg.png'
         alt='Home Card 0 Background'
         class='absolute inset-0 w-full h-full object-cover'
         priority={true}
+        loading='eager'
       />
       <div
         class='absolute top-4 left-4 right-4 p-4 border rounded-2xl bg-background text-sm'
@@ -37,6 +38,7 @@ import logoTileBg from '@/assets/logo_tile_bg.png'
         alt='Mascot'
         class='z-10 absolute left-14 -bottom-16 md:left-24 md:-bottom-28 w-36 h-[14.71875rem]'
         priority={true}
+        loading='eager'
       />
     </HomeCard>
     <HomeCard
@@ -47,12 +49,14 @@ import logoTileBg from '@/assets/logo_tile_bg.png'
         alt='Github Mark'
         class='z-10 relative size-24 md:size-16'
         priority={true}
+        loading='eager'
       />
       <Image
         src={mascot1withCode}
         alt='Mascot 1 with Code'
         class='absolute -bottom-8 -left-4 md:-bottom-4 md:left-0 w-[13.55rem] h-[10.0625rem] md:w-[9.0243rem] md:h-[6.701625rem]'
         priority={true}
+        loading='eager'
       />
       <LinkButton
         className='z-10 absolute bottom-4 right-4'
@@ -67,6 +71,7 @@ import logoTileBg from '@/assets/logo_tile_bg.png'
         alt='Home Card 2 Background'
         class='absolute inset-0 w-full h-full object-cover'
         priority={true}
+        loading='eager'
       />
       <div
         class='absolute top-4 left-4 right-4 p-4 border rounded-2xl bg-background text-sm'
@@ -78,6 +83,7 @@ import logoTileBg from '@/assets/logo_tile_bg.png'
         alt='Mascot 2'
         class='z-10 absolute -bottom-14 md:-bottom-20 right-12 w-[11.82rem] h-[15.42rem]'
         priority={true}
+        loading='eager'
       />
     </HomeCard>
     <HomeCard
@@ -88,6 +94,7 @@ import logoTileBg from '@/assets/logo_tile_bg.png'
         alt='Logo Tile Background'
         class='absolute inset-0 w-full h-full object-cover'
         priority={true}
+        loading='eager'
       />
     </HomeCard>
   </div>

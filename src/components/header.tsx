@@ -31,7 +31,7 @@ export default function Header() {
                 <a href='/'>Home</a>
               </DropdownMenuItem>
               <DropdownMenuItem asChild>
-                <a href='/blog'>Blog</a>
+                <a href='/blog/1'>Blog</a>
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -46,7 +46,7 @@ export default function Header() {
             </li>
             <li className='h-full'>
               <a
-                href='/blog'
+                href='/blog/1'
                 className='flex items-center h-full hover:text-foreground transition-colors duration-300'
               >
                 Blog

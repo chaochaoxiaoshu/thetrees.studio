@@ -19,7 +19,7 @@ export default function LinkButton(props: LinkButtonProps) {
         className
       )}
     >
-      <a href={href} target='_blank'>
+      <a href={href} target='_blank' aria-label='link button'>
         <ArrowUpRightIcon className='group-hover:text-[#B3E5C8] group-hover:rotate-12 transition-transform duration-300 ease-out' />
       </a>
     </Button>

@@ -18,6 +18,7 @@ export default defineConfig({
           pre: (node) => {
             node.properties.style =
               'background-color:hsl(var(--muted));color:#e1e4e8;overflow-x:auto'
+            node.properties.tabindex = undefined
           }
         }
       ]

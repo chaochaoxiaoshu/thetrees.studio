@@ -1,5 +1,5 @@
 ---
-cover: 'https://thetrees.studio/file/20241231/20241231_191998.png'
+cover: 'https://cdn.thetrees.studio/file/20250109/cover_implement-a-widget-editor-with-react-and-typescript.png'
 title: 使用 React 和 TypeScript 实现一个组件编辑器
 description: 我构建组件编辑器的经验
 slug: 'implement-a-widget-editor-with-react-and-typescript'
@@ -7,7 +7,7 @@ date: 2025-01-09
 tags: ['React', 'TypeScript', '组件编辑器']
 ---
 
-import { Code } from 'astro:components'
+import { Image } from 'astro:assets'
 
 公司的后台管理项目里有一个组件编辑器的需求：向页面中添加或删除组件、对组件拖动排序、编辑页面中组件的参数，最终保存时输出表示页面结构的 json 数据。大概长这个样子：
 
@@ -337,9 +337,9 @@ export type FormItemSchema<S = any> = {
 
 现在当定义 `formItemSchema` 时，`fieldPath` 和 `props` 都拥有了良好的类型提示和严格的类型校验。
 
-![fieldPath 的类型提示](https://cdn.thetrees.studio/file/20250109/fieldPath_type_infer.jpg)
+<Image src='https://cdn.thetrees.studio/file/20250109/fieldPath_type_infer.jpg' alt='fieldPath 的类型提示' inferSize />
 
-![props 的类型提示](https://cdn.thetrees.studio/file/20250109/props_type_infer.jpg)
+<Image src='https://cdn.thetrees.studio/file/20250109/props_type_infer.jpg' alt='props 的类型提示' inferSize />
 
 接下来创建一个中间组件，它用于在渲染时消费 `formItemSchema`，它具有以下职责：
 
