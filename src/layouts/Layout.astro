@@ -1,0 +1,48 @@
+---
+import { SEO } from 'astro-seo'
+import { ClientRouter } from 'astro:transitions'
+import Header from '@/components/header'
+import Footer from '@/components/footer.astro'
+
+import '@/styles/globals.css'
+
+interface Props {
+  title?: string
+  description?: string
+}
+
+const { title, description } = Astro.props
+---
+
+<!doctype html>
+<html lang='zh-CN'>
+  <head>
+    <meta charset='UTF-8' />
+    <meta name='viewport' content='width=device-width' />
+    <link rel='icon' href='/favicon.ico' />
+    <SEO
+      title={title}
+      titleTemplate='%s | TheTrees'
+      titleDefault='TheTrees'
+      description={description}
+      extend={{
+        meta: [
+          { name: 'theme-color', content: '#B2E6C8' },
+          { name: 'color-scheme', content: 'dark' },
+          { name: 'generator', content: Astro.generator },
+          { name: 'manifest', content: '/manifest.json' },
+          { name: 'category', content: 'technology' },
+          { name: 'referrer', content: 'origin-when-cross-origin' }
+        ]
+      }}
+    />
+    <ClientRouter />
+  </head>
+  <body class='dark'>
+    <main class='space-y-6'>
+      <Header client:load />
+      <slot />
+      <Footer />
+    </main>
+  </body>
+</html>

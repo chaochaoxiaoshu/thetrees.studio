@@ -1,0 +1,62 @@
+---
+import Layout from '@/layouts/Layout.astro'
+import PostCard from '@/components/post-card.astro'
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator
+} from '@/components/ui/breadcrumb'
+import { Home, BookOpen } from 'lucide-astro'
+import { getCollection } from 'astro:content'
+import type { PaginateFunction } from 'astro'
+
+export async function getStaticPaths({
+  paginate
+}: {
+  paginate: PaginateFunction
+}) {
+  const posts = await getCollection('blog')
+  return paginate(posts, { pageSize: 10 })
+}
+
+const { page } = Astro.props
+---
+
+<Layout>
+  <div class='container'>
+    <nav aria-label='Breadcrumb'>
+      <Breadcrumb>
+        <BreadcrumbList>
+          <BreadcrumbItem>
+            <BreadcrumbLink href='/' aria-label='Home'>
+              <Home className='size-4' />
+            </BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <BreadcrumbLink
+              href='/blog'
+              className='flex items-center gap-2'
+              aria-label='Blog'
+            >
+              <BookOpen className='size-4' />
+              <span>Blog</span>
+            </BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <BreadcrumbPage>
+              <span>第 {page.currentPage} 页</span>
+            </BreadcrumbPage>
+          </BreadcrumbItem>
+        </BreadcrumbList>
+      </Breadcrumb>
+    </nav>
+    <section class='mt-6 flex flex-col gap-4'>
+      {page.data.map(post => <PostCard post={post.data} />)}
+    </section>
+  </div>
+</Layout>

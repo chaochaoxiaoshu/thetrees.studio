@@ -1,0 +1,852 @@
+---
+cover: 'https://thetrees.studio/file/20241231/20241231_191998.png'
+title: 使用 React 和 TypeScript 实现一个组件编辑器
+description: 我构建组件编辑器的经验
+slug: 'implement-a-widget-editor-with-react-and-typescript'
+date: 2025-01-09
+tags: ['React', 'TypeScript', '组件编辑器']
+---
+
+import { Code } from 'astro:components'
+
+公司的后台管理项目里有一个组件编辑器的需求：向页面中添加或删除组件、对组件拖动排序、编辑页面中组件的参数，最终保存时输出表示页面结构的 json 数据。大概长这个样子：
+
+// 编辑器 gif 图
+
+我在公司的 Vue 项目中实现了这个需求，但由于种种原因，它马上变得乱糟糟，很不优雅。所以在这篇文章中，我将使用 React 和 TypeScript 重新实现一下。
+
+## 实现思路
+
+> 我把编辑器中创建的组件称为 “Widget”，为了与 React 中渲染视图的组件作区分。
+
+假设在编辑器内部应当有一个状态，它表示当前的 Widget 列表，页面中央的预览区域就使用这个列表状态来渲染预览视图：
+
+// 预览视图 加 注释
+
+列表中的每一项应当是一个最小的、可以序列化的普通对象，它仅仅包含必要的信息：
+
+1. Widget 的唯一标识
+2. Widget 的类别
+3. Widget 自身的状态
+
+比如一个 Image Widget，它应当有图片地址、链接类型、链接指向这三个状态值，它应该长这个样子：
+
+```ts
+{
+  id: '1b9d6bcd-bbfd-4b2d-9b5d-ab8dfbbd4bed',
+  type: 'image',
+  state: {
+    src: 'https://example.com/image.jpg',
+    linkType: 'url',
+    linkTarget: 'https://example.com'
+  }
+}
+```
+
+当点击选中预览区域中的 Widget 时，页面右侧出现一组表单，其中的表单项用于更新当前选中 Widget 的状态：
+
+// gif 图 操作表单 修改状态
+
+表单项之间可能相互关联、相互嵌套，也可能会随着当前选中 Widget 的状态动态变化，因此需要一种动态表单机制，使用一组 schema 来灵活地描述一个表单的形状，一个表单项的 schema 大致长这个样子：
+
+```ts
+{
+  key: 'src-input',
+  as: 'Input', // 使用 Input 组件渲染表单项
+  fieldPath: 'src', // 表单项绑定到组件状态的 path，在下文中解释这个属性
+  label: '图片地址',
+  description: '图片的地址',
+  props: {
+    // Input 组件的 props
+  },
+  rule: z.string().url() // 表单项的校验规则
+  visible: (state) => state.linkType === 'link' // 可选属性，用于控制表单项的显示与隐藏
+}
+```
+
+针对特别灵活的用例，我想到将表单的 schema 配置为一个函数，它接受整个编辑器作为参数，返回一个表单项的 schema 数组：
+
+```ts
+formSchema: {
+  itemsBuilder: (editor: Editor) => {
+    // 在这里通过编辑器获取到当前选中 Widget 的状态，动态生成表单项的 schema
+  }
+}
+```
+
+当 Widget 状态更新时，`itemsBuilder` 会被 React 组件再次调用，生成新的表单 schema，新的 schema 触发表单视图重新渲染，这样便解决了动态表单的需求。
+
+实现这个表单的另一个难点是如何将需要修改的状态值绑定到表单控件上，表单项的 schema 中有一个 `fieldPath` 属性表示指向 Widget 状态的 path：
+
+```ts
+{
+  // ...
+  fieldPath: 'src'
+  // ...
+}
+```
+
+在渲染表单时，找到当前选中 Widget 的状态对象，然后通过 `state[path]` 就可以获取到需要绑定的值。
+
+这看起来行得通，但在真实的需求中，Widget 的 state 可能会有很多层嵌套结构，比如轮播图 Widget 的状态：
+
+```ts
+{
+  // ...
+  state: {
+    // ...
+    items: [
+      // ...
+      {
+        src: 'https://example.com/image.jpg',
+        linkType: 'url',
+        linkTarget: 'https://example.com'
+      },
+      // ...
+    ]
+  },
+  // ...
+}
+```
+
+现在无法通过 `state[path]` 简单地获取到值了，所以需要用到 lodash 的 `get` 方法，它支持对象点语法和数组下标引用。假设 fieldPath 为一个 `'items[0].src'` 这样的字符串，那么可以通过这样的方式获取和操作值：
+
+```ts
+import { get, set } from 'lodash-es'
+
+const fieldPath = 'items[0].src'
+
+const value = get(state, fieldPath) // 获取值
+
+set(state, fieldPath, 'https://example.com/image.jpg') // 更新值
+```
+
+现在表单项和状态值之间便建立了联系。
+
+编辑器还剩最后需要解决的问题：
+
+- 一个 Widget 应当使用哪个组件来渲染它的预览视图
+- 一个 Widget 使用哪一组 `formSchema` 来生成它对应的表单
+
+我创建了一个名为 `WidgetSchema` 的类型，用于描述一种 Widget 应当使用什么组件渲染、使用什么 `formSchema` 来生成表单，像这样：
+
+```ts
+{
+  kind: 'image',
+  Component: ImageWidget,
+  formSchema: {
+    // ...
+  }
+}
+```
+
+编辑器内部也需要存储一个列表，包含所有 `WidgetSchema`，它应当通过配置项传入编辑器中：
+
+```ts
+widgetSchemas: [
+  // ...
+  {
+    kind: 'image',
+    Component: ImageWidget,
+    formSchema: {
+      // ...
+    }
+  },
+  {
+    kind: 'carousel',
+    Component: CarouselWidget,
+    formSchema: {
+      // ...
+    }
+  }
+  // ...
+]
+```
+
+现在当渲染预览视图时，根据 Widget 的 `kind`，可以找到了对应的 `WidgetSchema`，进而找到对应的组件和 formSchema。
+
+## 具体实现
+
+我习惯假装自己在写一个第三方库：**编辑器的核心实现和使用编辑器的部分应当分离**，就像提供方和使用方。
+
+复杂的 TypeScript 类型体操应当留在编辑器内部，为使用编辑器时提供良好的类型推断和提示；而与业务相关的代码不应当出现在编辑器的核心实现中。这种模式有助于写出松散解耦可维护可扩展的漂亮代码。
+
+### 表单控件
+
+编辑器需要两种类型的组件来渲染表单项：
+
+1. 表单控件，UI 组件库中的组件，我们常见的大多数 UI 模式，如 Input, Select, Switch 等
+2. 自定义组件，可能用于组织表单结构（例如将表单项分组的 Group），也可能为特定需求补充自定义的表单控件
+
+我使用 `shadcn/ui` 中的组件来作为表单控件，它拥有良好的 TS 支持、无障碍适配和卓越的可扩展性。为了与 shadcn 组件更好地配合，需要解决以下几个问题：
+
+- shadcn 的某些组件的 `onChange` 事件参数为 React 合成事件，而某些组件的 `onValueChange` 事件参数为简单值，需要将它们统一为简单值
+- 某些组件并不是一个单一的组件，而是由多个子组件组合而成，需要将其整合为单一的组件
+
+因此我在 shadcn 组件之上包装了一层，弥合了不同组件之间的差距，现在它们拥有统一的 `value` 和 `onChange` 属性，例如 Input 和 Select 组件：
+
+```tsx
+// src/components/form-items/input.tsx
+
+import { Input } from '../ui/input'
+
+export type DInputProps = Omit<
+  React.ComponentProps<typeof Input>,
+  'onChange'
+> & {
+  onChange?: (value: string) => void
+}
+
+export function DInput(props: DInputProps) {
+  const { onChange, ...otherProps } = props
+
+  return <Input {...otherProps} onChange={(e) => onChange?.(e.target.value)} />
+}
+```
+
+```tsx
+// src/components/form-items/select.tsx
+
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
+} from '@/components/ui/select'
+
+export interface DSelectProps {
+  id?: string
+  value?: string
+  onChange?: (value: string) => void
+  placeholder?: string
+  options: { label: string; value: string }[]
+  [key: string]: unknown
+}
+
+export function DSelect(props: DSelectProps) {
+  const { id, value, onChange, placeholder, options, ...otherProps } = props
+
+  return (
+    <Select value={value} onValueChange={onChange} {...otherProps}>
+      <SelectTrigger id={id}>
+        <SelectValue placeholder={placeholder} />
+      </SelectTrigger>
+      <SelectContent>
+        {options.map((option) => (
+          <SelectItem key={option.value} value={option.value}>
+            {option.label}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  )
+}
+```
+
+它们统一以 D 开头命名，代表它们是动态表单中使用的组件。
+
+### 表单项的 Schema
+
+起初我创建了一个类型用于描述表单项的 Schema：
+
+```ts
+export interface FormItemSchema<S = any> {
+  key: string
+  as: keyof ComponentPropsMap
+  fieldPath?: string
+  label?: string
+  description?: string
+  props?: Record<string, any>
+  rule?: ZodType
+  visible?: boolean | ((state: S) => boolean)
+  valueTransformer?: (value: any) => any
+  children?: FormItemSchema<S>[]
+  childrenBuilder?: (editor: Editor) => FormItemSchema<S>[] // 与 formSchemas.itemsBuilder 类似
+}
+
+export const formItemsMap = {
+  Input: DInput,
+  Select: DSelect
+  // ...
+} as const
+```
+
+这大致实现了需求，但存在以下问题：
+
+- `fieldPath` 的类型约束过于松散，书写字符串时无法获知 `state` 对象中是否存在该值
+- `props` 的类型约束也过于松散，无法获得良好的类型提示
+
+这对于使用方来说十分不便利，为了解决这个问题，优化使用方的体验，我们上类型体操。
+
+创建一个 `ComponentPropsMap` 类型，它包含所有 D 开头组件的 props 类型：
+
+```ts
+export type ComponentPropsMap = {
+  Group: DGroupProps
+  Button: DButtonProps
+  Input: DInputProps
+  Select: DSelectProps
+}
+```
+
+创建一个 `PathsToStringProps` 类型：
+
+```ts
+type PathsToStringProps<
+  T,
+  Depth extends number[] = []
+> = Depth['length'] extends 4
+  ? never
+  : T extends object
+  ? {
+      [K in keyof T]: T[K] extends Array<infer U>
+        ?
+            | `${K & string}[${number}]`
+            | `${K & string}[${number}]${U extends object
+                ? `.${PathsToStringProps<U, [...Depth, 1]>}`
+                : ''}`
+        : T[K] extends object
+        ?
+            | `${K & string}`
+            | `${K & string}.${PathsToStringProps<T[K], [...Depth, 1]>}`
+        : `${K & string}`
+    }[keyof T]
+  : never
+```
+
+然后重新定义 FormItemSchema：
+
+```ts
+export type FormItemSchema<S = any> = {
+  [K in keyof ComponentPropsMap]: {
+    key: string
+    as: K
+    fieldPath?: PathsToStringProps<S>
+    label?: string
+    description?: string
+    props?: ComponentPropsMap[K]
+    rule?: ZodType
+    visible?: boolean | ((state: S) => boolean)
+    valueTransformer?: (value: any) => any
+    children?: FormItemSchema<S>[]
+    childrenBuilder?: (editor: Editor) => FormItemSchema<S>[]
+  }
+}[keyof ComponentPropsMap]
+```
+
+现在当定义 `formItemSchema` 时，`fieldPath` 和 `props` 都拥有了良好的类型提示和严格的类型校验。
+
+![fieldPath 的类型提示](https://cdn.thetrees.studio/file/20250109/fieldPath_type_infer.jpg)
+
+![props 的类型提示](https://cdn.thetrees.studio/file/20250109/props_type_infer.jpg)
+
+接下来创建一个中间组件，它用于在渲染时消费 `formItemSchema`，它具有以下职责：
+
+- 根据 formItemSchema 的 `as` 属性，找到对应的表单控件
+- 根据 formItemSchema 的 `visible` 属性，控制表单控件的显示与隐藏
+- 根据 formItemSchema 的 `fieldPath` 属性，获取到需要绑定的值和更新值的函数
+- 根据 formItemSchema 的 `rule` 属性，在值更新时校验值是否合法
+- 根据 formItemSchema 的 `label` 和 `description` 属性，渲染表单控件的 label 和 description
+
+我将它命名为 `DynamicFormItem`， 以下是它的具体实现：
+
+```tsx
+// src/components/dynamic-form-item.tsx
+
+import { useEffect, useState } from 'react'
+import { useCurrentEditor } from '@/hooks/use-current-editor'
+import { useFieldState } from '@/hooks/use-field-state'
+import { FormItemSchema, formItemsMap } from '@/lib/definition'
+import { Label } from '@/components/ui/label'
+import { ZodIssue } from 'zod'
+
+interface DynamicFormItemProps {
+  formItemSchema: FormItemSchema
+}
+
+export function DynamicFormItem(props: DynamicFormItemProps) {
+  const {
+    key,
+    as,
+    label,
+    fieldPath,
+    visible,
+    props: formItemProps,
+    rule,
+    valueTransformer,
+    children: formItemChildren,
+    childrenBuilder: formItemChildrenBuilder
+  } = props.formItemSchema
+
+  console.assert(
+    !(formItemChildren && formItemChildrenBuilder),
+    'children 和 childrenBuilder 不能同时传入'
+  )
+
+  const FormItem = formItemsMap[as]
+
+  const editor = useCurrentEditor()
+
+  const finalVisible = (() => {
+    if (typeof visible === 'boolean') {
+      return visible
+    }
+    if (typeof visible === 'function') {
+      return visible(editor.selectedWidget?.state)
+    }
+    return true
+  })()
+
+  const [value, setValue] = useFieldState(editor.selectedWidget, fieldPath)
+  const [error, setError] = useState<ZodIssue | null>(null)
+
+  useEffect(() => {
+    if (rule && value) {
+      const result = rule.safeParse(value)
+      setError(result.error?.issues.at(0) ?? null)
+    }
+  }, [rule, value])
+
+  const handleChange = (value: any) => {
+    if (valueTransformer) {
+      setValue(valueTransformer(value))
+    } else {
+      setValue(value)
+    }
+  }
+
+  if (!finalVisible) {
+    return null
+  }
+
+  const content = (
+    <>
+      <FormItem
+        id={key}
+        {...(formItemProps as any)}
+        value={value}
+        onChange={handleChange}
+      >
+        {formItemChildren
+          ? formItemChildren?.map((child) => (
+              <DynamicFormItem key={child.key} formItemSchema={child} />
+            ))
+          : formItemProps?.children}
+      </FormItem>
+      {error && <p className='mt-2 text-red-500 text-xs'>{error.message}</p>}
+    </>
+  )
+
+  if (label) {
+    return (
+      <div className='flex flex-col gap-1.5'>
+        <Label htmlFor={key} className='text-sm font-medium'>
+          {label}
+        </Label>
+        {content}
+      </div>
+    )
+  }
+
+  return content
+}
+```
+
+其中用到了一个 `useFieldState` 钩子，它接受一个 `state` 对象和一个 `fieldPath 字符串，返回一个状态值和用于更新状态值的函数，具体实现为：
+
+```ts
+// src/hooks/use-field-state.ts
+
+import { Widget } from '@/lib/definition'
+import { get, set } from 'lodash-es'
+import { useState } from 'react'
+import { useCurrentEditor } from './use-current-editor'
+
+export function useFieldState<T = any>(
+  widget: Widget | null,
+  name?: string
+): [T | undefined, (value: T) => void] {
+  const [value, setInternalValue] = useState<T | undefined>(
+    () => get(widget?.state, name ?? '') as T | undefined
+  )
+
+  const { updateWidget } = useCurrentEditor()
+
+  const setValue = (newValue: T) => {
+    if (!widget?.state) return
+    const newState = { ...widget.state }
+    setInternalValue(newValue)
+    set(newState, name ?? '', newValue)
+    updateWidget({ ...widget, state: newState })
+  }
+
+  return [value, setValue]
+}
+```
+
+在钩子内部维护了一个状态，这是因为编辑器的表单控件全部都是受控组件，需要在此定义并维护状态，让 React 在渲染时知晓这个状态。
+
+并且由于要更改的值是数组中某一项的某个值，为了保持数据的不可变性，通过调用编辑器的 `updateWidget` 方法来更新整个 `widgets` 数组。（`updateWidget` 的实现在下文中）
+
+---
+
+以上便实现了关于动态表单渲染的所有逻辑，完整的渲染动态表单的过程为：
+
+选中 Widget -> 获取 Widget 对应的 `formSchema` -> 遍历 `formSchema`，将每个 `formItemSchema` 使用 `DynamicFormItem` 渲染 -> `DynamicFormItem` 内部根据 `formItemSchema` 配置来渲染表单控件
+
+### Widget & WidgetSchema
+
+我为 Widget 和 WidgetSchema 创建了简单的类型定义：
+
+```ts
+export interface Widget<S = any> {
+  id: string
+  kind: string
+  state: S
+}
+
+export interface WidgetSchema<S = any> {
+  kind: string
+  Component: React.ComponentType<{ state: S }>
+  defaultState: S
+  formSchema: FormSchema<S>
+}
+```
+
+创建了一个 `createWidget` 辅助函数，它接收一个 schema，然后返回一个 Widget 对象：
+
+```ts
+// src/lib/helpers.ts
+
+import { WidgetSchema } from '@/lib/definition'
+import { v4 as uuidv4 } from 'uuid'
+
+export function createWidget<S = any>(schema: WidgetSchema<S>, state?: S) {
+  return {
+    id: uuidv4(),
+    kind: schema.kind,
+    state: state ?? schema.defaultState
+  }
+}
+```
+
+然后创建了一个 `defineWidgetSchema` 函数，这符合前端开发的最佳实践，可以在很多库中看到这样的行为。它接收一个 WidgetSchema 配置，然后直接返回它：
+
+```ts
+export function defineWidgetSchema<State = any>(options: WidgetSchema<State>) {
+  return options
+}
+```
+
+在定义 WidgetSchema 时，将 Widget 的 State 作为类型参数传入：
+
+```ts
+// src/lib/widget-schemas/image.ts
+
+export interface ImageWidgetState {
+  src: string
+  linkType: string
+  linkTarget: string
+}
+
+export const imageWidgetSchema = defineWidgetSchema<ImageWidgetState>({
+  kind: 'image',
+  Component: ImageWidget,
+  formSchema: {
+    // ...
+  }
+})
+```
+
+这样便获得了完备的类型能力。
+
+### 编辑器
+
+前文提到编辑器内部需要维护一个 Widget 列表，以及操作这个列表的各种方法。以下是编辑器的类型定义：
+
+```ts
+// src/lib/definition.ts
+
+export interface Editor {
+  schemas: Readonly<WidgetSchema[]>
+  widgets: Widget[]
+  setWidgets: (widgets: Widget[]) => void
+  selectedWidget: Widget | null
+  selectWidget: (widget: Widget | null) => void
+  insertWidget: (widget: Widget, index?: number) => void
+  copyWidget: (widget: Widget) => void
+  updateWidget: (widget: Widget) => void
+  deleteWidget: (widget: Widget) => void
+}
+```
+
+实现一个 `useEditor` 钩子来创建编辑器实例，钩子内部维护着 Widget 列表的状态，并实现了操作这个列表的各种方法：
+
+```ts
+// src/hooks/use-editor.ts
+
+import { useState } from 'react'
+import { Editor, Widget, WidgetSchema } from '@/lib/definition'
+import { createWidget } from '@/lib/helpers'
+
+interface UseEditorOptions {
+  schemas: WidgetSchema[]
+  defaultWidgets?: Widget[]
+}
+
+export function useEditor(options: UseEditorOptions): Editor {
+  const { schemas, defaultWidgets } = options
+
+  const [widgets, setWidgets] = useState<Widget[]>(defaultWidgets ?? [])
+  const [selectedWidgetId, setSelectedWidgetId] = useState<string | null>(null)
+  const selectedWidget = widgets.find((w) => w.id === selectedWidgetId) ?? null
+
+  const selectWidget = (widget: Widget | null) => {
+    setSelectedWidgetId(widget?.id ?? null)
+  }
+
+  const insertWidget = (widget: Widget, index?: number) => {
+    setWidgets((prevWidgets) => {
+      const newWidgets = [...prevWidgets]
+      newWidgets.splice(index ?? newWidgets.length, 0, widget)
+      return newWidgets
+    })
+    selectWidget(widget)
+  }
+
+  const copyWidget = (widget: Widget) => {
+    const schema = schemas.find((s) => s.kind === widget.kind)
+    if (!schema) {
+      throw new Error('没有找到组件的 Schema')
+    }
+    const newWidget = createWidget(schema, widget.state)
+    const targetIndex = widgets.findIndex((w) => w.id === widget.id) + 1
+    insertWidget(newWidget, targetIndex)
+    selectWidget(newWidget)
+  }
+
+  const updateWidget = (widget: Widget) => {
+    setWidgets((prevWidgets) => {
+      const newWidgets = [...prevWidgets]
+      const targetIndex = newWidgets.findIndex((w) => w.id === widget.id)
+      newWidgets[targetIndex] = widget
+      return newWidgets
+    })
+  }
+
+  const deleteWidget = (widget: Widget) => {
+    setWidgets((widgets) => {
+      return widgets.filter((w) => w.id !== widget.id)
+    })
+    if (selectedWidgetId === widget.id) {
+      setSelectedWidgetId(null)
+    }
+  }
+
+  const editor: Editor = {
+    schemas,
+    widgets,
+    setWidgets,
+    selectedWidget,
+    selectWidget,
+    insertWidget,
+    copyWidget,
+    updateWidget,
+    deleteWidget
+  }
+
+  return editor
+}
+```
+
+我为当前选中组件定义了一个 `selectedWidgetId` 状态，然后在 widgets 中根据 id 查找到对应的 widget 对象，而不是直接定义 `selectedWidget` 状态。因为假设 `selectedWidget` 存储了一个 Widget 对象的引用，修改 `widgets` 列表后，`selectedWidget` 中保存的引用便会过时。而使用 `selectedWidgetId` 保存当前选中 Widget 的 id，当 `widgets` 列表更新后，`selectedWidget` 会重新计算，获取最新的引用。
+
+为了方便在树中的各个位置方便地获取编辑器的引用，我创建了一个 `EditorProvider` 组件和一个 `useCurrentEditor` 钩子，它们只是对 React Context 的简单包装：
+
+```ts
+// src/lib/contexts.ts
+
+import { createContext } from 'react'
+import { Editor } from '@/lib/definition'
+
+export const EditorContext = createContext<Editor | null>(null)
+```
+
+```tsx
+// src/components/editor-provider.tsx
+
+import { EditorContext } from '@/lib/contexts'
+import { Editor } from '@/lib/definition'
+
+interface EditorProviderProps {
+  editor: Editor
+  children: React.ReactNode
+}
+
+export function EditorProvider(props: EditorProviderProps) {
+  const { editor, children } = props
+  return (
+    <EditorContext.Provider value={editor}>{children}</EditorContext.Provider>
+  )
+}
+```
+
+```ts
+// src/hooks/use-current-editor.ts
+
+import { useContext } from 'react'
+import { EditorContext } from '@/lib/contexts'
+
+export function useCurrentEditor() {
+  const editor = useContext(EditorContext)
+  if (!editor) {
+    throw new Error('没有找到编辑器上下文')
+  }
+  return editor
+}
+```
+
+至此，作为“提供方”的全部实现便完成了，在使用时只需要：
+
+创建一个编辑器实例，并将它注入树中：
+
+```tsx
+// src/app.tsx
+
+import { EditorProvider } from '@/components/editor-provider'
+import { useEditor } from '@/hooks/use-editor'
+import { imageWidgetSchema, carouselWidgetSchema } from '@/lib/widget-schemas'
+
+export default function App() {
+  const editor = useEditor({
+    schemas: [
+      imageWidgetSchema,
+      carouselWidgetSchema
+      // ...
+    ],
+    defaultWidgets: [
+      // ...
+    ]
+  })
+
+  return <EditorProvider editor={editor}>{/* ... */}</EditorProvider>
+}
+```
+
+在编辑器的任意位置使用 `useCurrentEditor` 钩子来获取编辑器实例，例如，在左侧组件库面板中，点击卡片创建一个 Widget：
+
+```tsx
+// src/components/component-library.tsx
+
+import { useCurrentEditor } from '@/hooks/use-current-editor'
+import { createWidget } from '@/lib/helpers'
+
+function WidgetCard() {
+  const editor = useCurrentEditor()
+  const schema = editor.schemas.find((schema) => schema.kind === kind)
+
+  // ...
+
+  const handleClick = () => {
+    if (!schema) {
+      throw new Error(`未找到 kind 为 ${kind} 的 Schema`)
+    }
+    const widget = createWidget(schema)
+    editor.insertWidget(widget)
+  }
+
+  return (
+    // ...
+  )
+}
+```
+
+渲染预览视图：
+
+```tsx
+// src/components/preview.tsx
+
+import { useCurrentEditor } from '@/hooks/use-current-editor'
+import { ScrollArea } from '@/components/ui/scroll-area'
+import { WidgetPreviewWrapper } from './widget-preview-wrapper'
+
+export function Preview() {
+  const editor = useCurrentEditor()
+
+  return (
+    <main className='flex justify-center items-center w-full h-full bg-muted'>
+      <div className='relative flex flex-col min-w-[300px] aspect-[9/20] h-[95vh] bg-white rounded-3xl overflow-hidden'>
+        {/* ... */}
+        <ScrollArea className='flex-auto'>
+          {editor.widgets.map((widget) => {
+            const schema = editor.schemas.find(
+              (schema) => schema.kind === widget.kind
+            )
+            if (!schema) return null
+            return (
+              <WidgetPreviewWrapper
+                key={widget.id}
+                isSelected={widget.id === editor.selectedWidget?.id}
+                onClick={() => editor.selectWidget(widget)}
+                onCopy={() => editor.copyWidget(widget)}
+                onDelete={() => editor.deleteWidget(widget)}
+              >
+                <schema.Component state={widget.state} />
+              </WidgetPreviewWrapper>
+            )
+          })}
+        </ScrollArea>
+        {/* ... */}
+      </div>
+    </main>
+  )
+}
+```
+
+渲染表单：
+
+```tsx
+// src/components/inspector.tsx
+
+import { Separator } from '@/components/ui/separator'
+import { ScrollArea } from '@/components/ui/scroll-area'
+import { useCurrentEditor } from '@/hooks/use-current-editor'
+import { DynamicFormItem } from './dynamic-form-item'
+
+export function Inspector() {
+  const editor = useCurrentEditor()
+
+  const formItemsSchema = (() => {
+    const formSchema = editor.schemas.find(
+      (schema) => schema.kind === editor.selectedWidget?.kind
+    )?.formSchema
+    const items = formSchema?.items
+    const builder = formSchema?.itemsBuilder
+    console.assert(!(items && builder), 'items 和 itemsBuilder 不能同时传入')
+    return items ?? builder?.(editor)
+  })()
+
+  return (
+    <div className='flex flex-col h-full'>
+      <div className='p-4 pb-3'>
+        <h2 className='font-medium'>编辑</h2>
+      </div>
+      <Separator />
+      <ScrollArea className='flex-auto'>
+        <div className='p-4 space-y-4'>
+          {formItemsSchema?.map((item) => (
+            <DynamicFormItem key={item.key} formItemSchema={item} />
+          ))}
+        </div>
+      </ScrollArea>
+    </div>
+  )
+}
+```
+
+一切正常运作～
+
+## 总结
+
+以上是我实现这个组件编辑器的经验，如果你感兴趣，可以[在这里](https://github.com/chaochaoxiaoshu/widget-editor)查看完整代码。

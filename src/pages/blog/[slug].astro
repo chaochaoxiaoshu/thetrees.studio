@@ -1,0 +1,114 @@
+---
+import dayjs from 'dayjs'
+import { getCollection, render } from 'astro:content'
+import Layout from '@/layouts/Layout.astro'
+import PostNavigation from '@/components/post-navigation'
+import { Avatar } from '@/components/ui/avatar'
+import { Badge } from '@/components/ui/badge'
+import { Separator } from '@/components/ui/separator'
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator
+} from '@/components/ui/breadcrumb'
+import { Home, BookOpen } from 'lucide-astro'
+
+export async function getStaticPaths() {
+  const posts = await getCollection('blog')
+  const sortedPosts = posts.sort((a, b) => {
+    return b.data.date.getTime() - a.data.date.getTime()
+  })
+  return sortedPosts.map(post => {
+    const postIndex = sortedPosts.indexOf(post)
+    const prevPost = (() => {
+      if (postIndex <= 0) return null
+      return sortedPosts.at(postIndex - 1)?.data ?? null
+    })()
+    const nextPost = (() => {
+      if (postIndex >= sortedPosts.length - 1) return null
+      return sortedPosts.at(postIndex + 1)?.data ?? null
+    })()
+    return {
+      params: { slug: post.data.slug },
+      props: { post, prevPost, nextPost }
+    }
+  })
+}
+
+const { post, prevPost, nextPost } = Astro.props
+const { Content } = await render(post)
+---
+
+<Layout>
+  <nav class='container' aria-label='Breadcrumb'>
+    <Breadcrumb>
+      <BreadcrumbList>
+        <BreadcrumbItem>
+          <BreadcrumbLink href='/' aria-label='Home'>
+            <Home className='size-4' />
+          </BreadcrumbLink>
+        </BreadcrumbItem>
+        <BreadcrumbSeparator />
+        <BreadcrumbItem>
+          <BreadcrumbLink href='/blog' className='flex items-center gap-2'>
+            <BookOpen className='size-4' />
+            <span>Blog</span>
+          </BreadcrumbLink>
+        </BreadcrumbItem>
+        <BreadcrumbSeparator />
+        <BreadcrumbItem>
+          <BreadcrumbPage>
+            <span>{post.data.title}</span>
+          </BreadcrumbPage>
+        </BreadcrumbItem>
+      </BreadcrumbList>
+    </Breadcrumb>
+  </nav>
+  <div class='px-5 mx-auto w-full max-w-[1000px]'>
+    <div class='relative aspect-video'>
+      <img
+        src={post.data.cover}
+        alt='Post cover image'
+        class='absolute inset-0 w-full h-full rounded-xl object-cover'
+      />
+    </div>
+  </div>
+  <article class='container flex flex-col gap-y-6'>
+    <header class='flex flex-col gap-y-4'>
+      <h1 class='text-pretty text-3xl font-bold text-center sm:text-4xl'>
+        {post.data.title}
+      </h1>
+      <div
+        class='flex flex-wrap items-center justify-center gap-2 text-sm text-muted-foreground'
+      >
+        <div class='flex items-center gap-x-1.5'>
+          <Avatar className='size-5 flex items-center justify-center bg-muted'>
+            CH
+          </Avatar>
+          <span>朝小树</span>
+        </div>
+        <Separator orientation='vertical' className='h-4' />
+        <span>{dayjs(post.data.date).format('YYYY/MM/DD')}</span>
+      </div>
+      <div class='flex flex-wrap justify-center gap-2'>
+        {
+          post.data.tags.map(tag => (
+            <Badge variant='secondary' className='rounded-full font-normal'>
+              # {tag}
+            </Badge>
+          ))
+        }
+      </div>
+    </header>
+    <PostNavigation client:load previousPost={prevPost} nextPost={nextPost} />
+    <div
+      class='prose prose-sm md:prose-base max-w-none dark:prose-invert prose-zinc prose-code:text-xs md:prose-code:text-sm'
+    >
+      <Content />
+    </div>
+    <PostNavigation client:load previousPost={prevPost} nextPost={nextPost} />
+  </article>
+</Layout>

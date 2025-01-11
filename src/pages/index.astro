@@ -1,0 +1,94 @@
+---
+import { Image } from 'astro:assets'
+import Layout from '@/layouts/Layout.astro'
+import HomeCard from '@/components/home-card.astro'
+import LinkButton from '@/components/home-link-button'
+
+import homeCard0Bg from '@/assets/home_card_0_bg.png'
+import homeCard2Bg from '@/assets/home_card_2_bg.png'
+import mascot from '@/assets/mascot_0.png'
+import mascot1withCode from '@/assets/mascot_1_with_code.png'
+import mascot2 from '@/assets/mascot_2.png'
+import githubMark from '@/assets/github_mark.svg'
+import logoTileBg from '@/assets/logo_tile_bg.png'
+---
+
+<Layout>
+  <div
+    class='px-4 max-w-[375px] md:max-w-screen-md mx-auto grid grid-cols-1 md:grid-cols-3 md:grid-rows-2 gap-4'
+  >
+    <HomeCard
+      className='aspect-square md:aspect-auto md:h-full md:col-span-2 md:row-span-1 relative'
+    >
+      <Image
+        src={homeCard0Bg}
+        alt='Home Card 0 Background'
+        class='absolute inset-0 w-full h-full object-cover'
+        priority={true}
+      />
+      <div
+        class='absolute top-4 left-4 right-4 p-4 border rounded-2xl bg-background text-sm'
+      >
+        Hey，我是朝小树，有爱的前端开发者，JavaScript
+        至少占据了我生活的三分之一。
+      </div>
+      <Image
+        src={mascot}
+        alt='Mascot'
+        class='z-10 absolute left-14 -bottom-16 md:left-24 md:-bottom-28 w-36 h-[14.71875rem]'
+        priority={true}
+      />
+    </HomeCard>
+    <HomeCard
+      className='aspect-square md:col-start-3 md:col-span-1 md:row-span-1 relative flex justify-center items-center'
+    >
+      <Image
+        src={githubMark}
+        alt='Github Mark'
+        class='z-10 relative size-24 md:size-16'
+        priority={true}
+      />
+      <Image
+        src={mascot1withCode}
+        alt='Mascot 1 with Code'
+        class='absolute -bottom-8 -left-4 md:-bottom-4 md:left-0 w-[13.55rem] h-[10.0625rem] md:w-[9.0243rem] md:h-[6.701625rem]'
+        priority={true}
+      />
+      <LinkButton
+        className='z-10 absolute bottom-4 right-4'
+        href='https://github.com/chaochaoxiaoshu'
+      />
+    </HomeCard>
+    <HomeCard
+      className='aspect-square md:aspect-auto md:h-full md:col-start-2 md:col-span-2 md:row-start-2 relative'
+    >
+      <Image
+        src={homeCard2Bg}
+        alt='Home Card 2 Background'
+        class='absolute inset-0 w-full h-full object-cover'
+        priority={true}
+      />
+      <div
+        class='absolute top-4 left-4 right-4 p-4 border rounded-2xl bg-background text-sm'
+      >
+        我目前在一家有爱的公司从事前端开发工作，我也在致力于成为可以独当一面的全栈工程师。
+      </div>
+      <Image
+        src={mascot2}
+        alt='Mascot 2'
+        class='z-10 absolute -bottom-14 md:-bottom-20 right-12 w-[11.82rem] h-[15.42rem]'
+        priority={true}
+      />
+    </HomeCard>
+    <HomeCard
+      className='aspect-square md:col-start-1 md:col-span-1 md:row-start-2 relative'
+    >
+      <Image
+        src={logoTileBg}
+        alt='Logo Tile Background'
+        class='absolute inset-0 w-full h-full object-cover'
+        priority={true}
+      />
+    </HomeCard>
+  </div>
+</Layout>
