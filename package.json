@@ -4,7 +4,7 @@
   "version": "0.0.1",
   "scripts": {
     "dev": "astro dev",
-    "build": "astro build && scf deploy",
+    "build": "astro build",
     "preview": "astro preview",
     "astro": "astro"
   },
@@ -33,7 +33,6 @@
     "tailwindcss-animate": "^1.0.7"
   },
   "devDependencies": {
-    "@serverless/platform-client-china": "^2.4.2",
     "@tailwindcss/typography": "^0.5.16"
   }
 }
