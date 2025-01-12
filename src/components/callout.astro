@@ -1,13 +1,44 @@
 ---
 import { cva } from 'class-variance-authority'
+import { Info, AlertTriangle, XCircle, CheckCircle } from 'lucide-astro'
 
 interface Props {
-  type: 'info' | 'warning' | 'error' | 'success'
+  type: 'normal' | 'info' | 'warning' | 'error' | 'success'
 }
 
 const { type } = Astro.props
 
-const classes = cva({})
+const classes = cva(
+  'not-prose flex items-start p-4 my-4 md:my-5 rounded-lg gap-3',
+  {
+    variants: {
+      type: {
+        normal: 'bg-muted text-muted-foreground',
+        info: 'bg-blue-50 text-blue-800 dark:bg-blue-950 dark:text-blue-200',
+        warning:
+          'bg-yellow-50 text-yellow-800 dark:bg-yellow-950 dark:text-yellow-200',
+        error: 'bg-red-50 text-red-800 dark:bg-red-950 dark:text-red-200',
+        success:
+          'bg-green-50 text-green-800 dark:bg-green-950 dark:text-green-200'
+      }
+    }
+  }
+)
+
+const icons = {
+  normal: () => '💡',
+  info: Info,
+  warning: AlertTriangle,
+  error: XCircle,
+  success: CheckCircle
+}
+
+const Icon = icons[type]
 ---
 
-<div class='flex items-start p-4 rounded-md'></div>
+<div class={classes({ type })}>
+  <Icon class='w-6 h-6 mt-0.5 text-lg' />
+  <div>
+    <slot />
+  </div>
+</div>

@@ -4,6 +4,7 @@ import { getCollection, render } from 'astro:content'
 import { Image } from 'astro:assets'
 import Layout from '@/layouts/Layout.astro'
 import PostNavigation from '@/components/post-navigation'
+import ScrollToTopButton from '@/components/scroll-to-top-button'
 import { Avatar } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
@@ -89,7 +90,7 @@ const { Content } = await render(post)
       >
         <div class='flex items-center gap-x-1.5'>
           <Avatar className='size-5 flex items-center justify-center bg-muted'>
-            CH
+            C
           </Avatar>
           <span>朝小树</span>
         </div>
@@ -108,10 +109,11 @@ const { Content } = await render(post)
     </header>
     <PostNavigation client:load previousPost={prevPost} nextPost={nextPost} />
     <div
-      class='prose prose-sm md:prose-base max-w-none dark:prose-invert prose-zinc prose-code:text-xs md:prose-code:text-sm'
+      class='prose prose-sm md:prose-base max-w-none dark:prose-invert prose-zinc prose-code:text-xs md:prose-code:text-sm prose-inline-code:before:content-[""] prose-inline-code:after:content-[""] prose-inline-code:text-sm prose-inline-code:font-normal prose-inline-code:px-1.5 prose-inline-code:py-1 prose-inline-code:bg-muted prose-inline-code:rounded-md prose-a:mx-1.5 prose-a:text-[#B2E6C8]'
     >
       <Content />
     </div>
     <PostNavigation client:load previousPost={prevPost} nextPost={nextPost} />
   </article>
+  <ScrollToTopButton client:load className='fixed bottom-5 right-5' />
 </Layout>

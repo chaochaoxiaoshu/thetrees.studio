@@ -1,5 +1,5 @@
 ---
-cover: 'https://cdn.thetrees.studio/file/20250109/cover_implement-a-widget-editor-with-react-and-typescript.png'
+cover: 'https://cdn.thetrees.studio/file/20250109/implement-a-widget-editor-with-react-and-typescript_cover.png'
 title: 使用 React 和 TypeScript 实现一个组件编辑器
 description: 我构建组件编辑器的经验
 slug: 'implement-a-widget-editor-with-react-and-typescript'
@@ -8,28 +8,35 @@ tags: ['React', 'TypeScript', '组件编辑器']
 ---
 
 import { Image } from 'astro:assets'
+import Callout from '@/components/callout.astro'
 
 公司的后台管理项目里有一个组件编辑器的需求：向页面中添加或删除组件、对组件拖动排序、编辑页面中组件的参数，最终保存时输出表示页面结构的 json 数据。大概长这个样子：
 
-// 编辑器 gif 图
+<Image
+  src='https://cdn.thetrees.studio/file/20250109/widget_editor_preview.gif'
+  alt='组件编辑器预览'
+  inferSize
+/>
 
 我在公司的 Vue 项目中实现了这个需求，但由于种种原因，它马上变得乱糟糟，很不优雅。所以在这篇文章中，我将使用 React 和 TypeScript 重新实现一下。
 
+可以<a href="https://widget-editor.vercel.app/" target='_blank'>在这里</a>查看现场演示，也可以<a href="https://github.com/chaochaoxiaoshu/widget-editor" target='_blank'>在这里</a>查看源码。
+
 ## 实现思路
 
-> 我把编辑器中创建的组件称为 “Widget”，为了与 React 中渲染视图的组件作区分。
+<Callout type='normal'>
+  我把编辑器中创建的组件称为 “Widget”，为了与 React 中渲染视图的组件作区分。
+</Callout>
 
-假设在编辑器内部应当有一个状态，它表示当前的 Widget 列表，页面中央的预览区域就使用这个列表状态来渲染预览视图：
+假设在编辑器内部应当有一个状态，表示 Widget 列表，页面中央的预览区域使用这个列表状态来渲染预览视图。
 
-// 预览视图 加 注释
-
-列表中的每一项应当是一个最小的、可以序列化的普通对象，它仅仅包含必要的信息：
+列表中的每一项应当是一个最小的、可序列化的普通对象，它仅仅包含必要的信息：
 
 1. Widget 的唯一标识
 2. Widget 的类别
 3. Widget 自身的状态
 
-比如一个 Image Widget，它应当有图片地址、链接类型、链接指向这三个状态值，它应该长这个样子：
+比如一个 Image Widget，有图片地址、链接类型、链接指向这三个状态值，它应该长这个样子：
 
 ```ts
 {
@@ -43,11 +50,11 @@ import { Image } from 'astro:assets'
 }
 ```
 
-当点击选中预览区域中的 Widget 时，页面右侧出现一组表单，其中的表单项用于更新当前选中 Widget 的状态：
+当点击选中预览区域中的 Widget 时，页面右侧出现一组表单，其中的表单项用于更新当前选中 Widget 的状态。
 
-// gif 图 操作表单 修改状态
+表单项之间可能相互关联、相互嵌套，也可能会随着当前选中 Widget 的状态动态变化，因此需要一种动态表单机制，使用一组 schema 来灵活地描述一个表单的形状。
 
-表单项之间可能相互关联、相互嵌套，也可能会随着当前选中 Widget 的状态动态变化，因此需要一种动态表单机制，使用一组 schema 来灵活地描述一个表单的形状，一个表单项的 schema 大致长这个样子：
+一个基本的表单项的 schema 大致长这个样子：
 
 ```ts
 {
@@ -64,19 +71,19 @@ import { Image } from 'astro:assets'
 }
 ```
 
-针对特别灵活的用例，我想到将表单的 schema 配置为一个函数，它接受整个编辑器作为参数，返回一个表单项的 schema 数组：
+为了解决渲染动态表单的需求，我想到创建一个 `itemsBuilder` 函数，它接收编辑器实例作为参数，返回一个包含所有表单项 schema 的数组：
 
 ```ts
 formSchema: {
-  itemsBuilder: (editor: Editor) => {
+  itemsBuilder: (editor: Editor): FormItemSchema[] => {
     // 在这里通过编辑器获取到当前选中 Widget 的状态，动态生成表单项的 schema
   }
 }
 ```
 
-当 Widget 状态更新时，`itemsBuilder` 会被 React 组件再次调用，生成新的表单 schema，新的 schema 触发表单视图重新渲染，这样便解决了动态表单的需求。
+当 Widget 状态更新时，使用新的状态创建新的 formItemSchema 数组，进而渲染新的表单视图，这样便解决了动态表单的需求。
 
-实现这个表单的另一个难点是如何将需要修改的状态值绑定到表单控件上，表单项的 schema 中有一个 `fieldPath` 属性表示指向 Widget 状态的 path：
+实现这个表单的另一个难点是如何将需要修改的状态值绑定到表单控件上，表单项的 schema 中有一个 `fieldPath` 字段，表示应当更新 Widget 状态对象中的哪个值：
 
 ```ts
 {
@@ -86,7 +93,7 @@ formSchema: {
 }
 ```
 
-在渲染表单时，找到当前选中 Widget 的状态对象，然后通过 `state[path]` 就可以获取到需要绑定的值。
+在渲染表单时，找到当前选中 Widget 的状态对象，通过 `state[path]` 就可以获取到需要绑定的值。
 
 这看起来行得通，但在真实的需求中，Widget 的 state 可能会有很多层嵌套结构，比如轮播图 Widget 的状态：
 
@@ -109,24 +116,26 @@ formSchema: {
 }
 ```
 
-现在无法通过 `state[path]` 简单地获取到值了，所以需要用到 lodash 的 `get` 方法，它支持对象点语法和数组下标引用。假设 fieldPath 为一个 `'items[0].src'` 这样的字符串，那么可以通过这样的方式获取和操作值：
+这就无法通过 `state[path]` 简单地获取到值了，所以需要用到 lodash 的 `get` 方法，它支持对象点语法和数组下标引用。假设 fieldPath 为一个 `'items[0].src'` 这样的字符串，那么可以通过这样的方式获取和操作值：
 
 ```ts
 import { get, set } from 'lodash-es'
 
-const fieldPath = 'items[0].src'
+const exampleFieldPath = 'items[0].src'
 
-const value = get(state, fieldPath) // 获取值
+// 获取值
+const value = get(state, exampleFieldPath)
 
-set(state, fieldPath, 'https://example.com/image.jpg') // 更新值
+// 更新值
+set(state, exampleFieldPath, 'https://example.com/image.jpg')
 ```
 
 现在表单项和状态值之间便建立了联系。
 
 编辑器还剩最后需要解决的问题：
 
-- 一个 Widget 应当使用哪个组件来渲染它的预览视图
-- 一个 Widget 使用哪一组 `formSchema` 来生成它对应的表单
+- 确定每一个 Widget 应当使用哪个组件来渲染它的预览视图
+- 确定当前选中的 Widget 使用哪一组 `formSchema` 来生成它对应的表单
 
 我创建了一个名为 `WidgetSchema` 的类型，用于描述一种 Widget 应当使用什么组件渲染、使用什么 `formSchema` 来生成表单，像这样：
 
@@ -163,7 +172,7 @@ widgetSchemas: [
 ]
 ```
 
-现在当渲染预览视图时，根据 Widget 的 `kind`，可以找到了对应的 `WidgetSchema`，进而找到对应的组件和 formSchema。
+当渲染预览视图时，根据 Widget 的 `kind`，可以找到对应的 `WidgetSchema`，进而找到对应的组件和 formSchema。
 
 ## 具体实现
 
@@ -178,10 +187,10 @@ widgetSchemas: [
 1. 表单控件，UI 组件库中的组件，我们常见的大多数 UI 模式，如 Input, Select, Switch 等
 2. 自定义组件，可能用于组织表单结构（例如将表单项分组的 Group），也可能为特定需求补充自定义的表单控件
 
-我使用 `shadcn/ui` 中的组件来作为表单控件，它拥有良好的 TS 支持、无障碍适配和卓越的可扩展性。为了与 shadcn 组件更好地配合，需要解决以下几个问题：
+我使用 `shadcn/ui` 中的组件来作为表单控件，它拥有良好的 TS 支持、无障碍适配和卓越的可扩展性。为了让 shadcn 组件更适用于编辑器，需要解决以下几个问题：
 
 - shadcn 的某些组件的 `onChange` 事件参数为 React 合成事件，而某些组件的 `onValueChange` 事件参数为简单值，需要将它们统一为简单值
-- 某些组件并不是一个单一的组件，而是由多个子组件组合而成，需要将其整合为单一的组件
+- shadcn 的某些组件并不是一个单一的组件，而是由多个子组件组合而成，需要将其整合为单一的组件
 
 因此我在 shadcn 组件之上包装了一层，弥合了不同组件之间的差距，现在它们拥有统一的 `value` 和 `onChange` 属性，例如 Input 和 Select 组件：
 
@@ -290,7 +299,7 @@ export type ComponentPropsMap = {
 }
 ```
 
-创建一个 `PathsToStringProps` 类型：
+创建一个 `PathsToStringProps` 类型，递归遍历一个对象所有可能的属性路径字符串：
 
 ```ts
 type PathsToStringProps<
@@ -315,7 +324,7 @@ type PathsToStringProps<
   : never
 ```
 
-然后重新定义 FormItemSchema：
+然后重新定义 `FormItemSchema`，将 `fieldPath` 的类型约束为 PathsToStringProps 的返回值，将 `props` 的类型约束为 `ComponentPropsMap` 的值：
 
 ```ts
 export type FormItemSchema<S = any> = {
@@ -485,11 +494,9 @@ export function useFieldState<T = any>(
 }
 ```
 
-在钩子内部维护了一个状态，这是因为编辑器的表单控件全部都是受控组件，需要在此定义并维护状态，让 React 在渲染时知晓这个状态。
+在钩子内部维护了一个状态，这是因为编辑器的表单控件全部都是受控组件，需要让 React 在渲染时知晓这个状态。
 
 并且由于要更改的值是数组中某一项的某个值，为了保持数据的不可变性，通过调用编辑器的 `updateWidget` 方法来更新整个 `widgets` 数组。（`updateWidget` 的实现在下文中）
-
----
 
 以上便实现了关于动态表单渲染的所有逻辑，完整的渲染动态表单的过程为：
 
@@ -497,7 +504,7 @@ export function useFieldState<T = any>(
 
 ### Widget & WidgetSchema
 
-我为 Widget 和 WidgetSchema 创建了简单的类型定义：
+我为 `Widget` 和 `WidgetSchema` 创建了简单的类型定义：
 
 ```ts
 export interface Widget<S = any> {
@@ -514,7 +521,7 @@ export interface WidgetSchema<S = any> {
 }
 ```
 
-创建了一个 `createWidget` 辅助函数，它接收一个 schema，然后返回一个 Widget 对象：
+创建了一个 `createWidget` 辅助函数，它接收一个 schema，然后返回一个 `Widget` 对象：
 
 ```ts
 // src/lib/helpers.ts
@@ -531,7 +538,7 @@ export function createWidget<S = any>(schema: WidgetSchema<S>, state?: S) {
 }
 ```
 
-然后创建了一个 `defineWidgetSchema` 函数，这符合前端开发的最佳实践，可以在很多库中看到这样的行为。它接收一个 WidgetSchema 配置，然后直接返回它：
+然后创建了一个 `defineWidgetSchema` 函数，这符合前端开发的最佳实践，可以在很多库中看到这样的行为。它接收一个 `WidgetSchema` 配置，然后直接返回它：
 
 ```ts
 export function defineWidgetSchema<State = any>(options: WidgetSchema<State>) {
@@ -539,7 +546,7 @@ export function defineWidgetSchema<State = any>(options: WidgetSchema<State>) {
 }
 ```
 
-在定义 WidgetSchema 时，将 Widget 的 State 作为类型参数传入：
+在定义 `WidgetSchema` 时，将 Widget 的状态对象作为类型参数传入：
 
 ```ts
 // src/lib/widget-schemas/image.ts
@@ -792,7 +799,10 @@ export function Preview() {
                 onCopy={() => editor.copyWidget(widget)}
                 onDelete={() => editor.deleteWidget(widget)}
               >
-                <schema.Component state={widget.state} />
+                <schema.Component
+                  key={`${widget.id}-${JSON.stringify(widget.state)}`}
+                  state={widget.state}
+                />
               </WidgetPreviewWrapper>
             )
           })}
@@ -849,4 +859,4 @@ export function Inspector() {
 
 ## 总结
 
-以上是我实现这个组件编辑器的经验，如果你感兴趣，可以[在这里](https://github.com/chaochaoxiaoshu/widget-editor)查看完整代码。
+以上是我实现这个组件编辑器的经验，出于篇幅原因，省略了渲染视图的部分代码，某些功能的实现也很简陋。如果你感兴趣，可以[在这里](https://github.com/chaochaoxiaoshu/widget-editor)查看完整代码。
