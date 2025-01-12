@@ -3,11 +3,21 @@ import { defineConfig } from 'astro/config'
 import mdx from '@astrojs/mdx'
 import react from '@astrojs/react'
 import tailwind from '@astrojs/tailwind'
+import remarkToc from 'remark-toc'
+import rehypeToc from 'rehype-toc'
+import rehypeSlug from 'rehype-slug'
 
 // https://astro.build/config
 export default defineConfig({
   site: 'https://thetrees.studio',
-  integrations: [mdx(), react(), tailwind({ applyBaseStyles: false })],
+  integrations: [
+    mdx({
+      remarkPlugins: [[remarkToc, { tight: true, ordered: false }]],
+      rehypePlugins: [rehypeSlug]
+    }),
+    react(),
+    tailwind({ applyBaseStyles: false })
+  ],
   experimental: {
     svg: true
   },

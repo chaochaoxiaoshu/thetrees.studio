@@ -1,16 +1,18 @@
 import { Button } from '@/components/ui/button'
+import { cn } from '@/lib/utils'
 import { ArrowLeft, ArrowRight } from 'lucide-react'
 
 interface PostNavigationProps {
+  className?: string
   previousPost: { title: string; slug: string } | null
   nextPost: { title: string; slug: string } | null
 }
 
 export default function PostNavigation(props: PostNavigationProps) {
-  const { previousPost, nextPost } = props
+  const { previousPost, nextPost, className } = props
 
   return (
-    <div className='flex flex-col md:flex-row gap-4'>
+    <div className={cn('flex flex-col md:flex-row gap-4', className)}>
       {previousPost && (
         <Button
           variant='outline'

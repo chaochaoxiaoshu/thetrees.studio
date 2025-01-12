@@ -72,3 +72,17 @@
     @apply bg-background text-foreground;
   }
 }
+
+.toc {
+  @apply xl:hidden;
+  @apply p-4 mb-6 rounded-xl border;
+  @apply before:block before:mb-2 before:content-["目录"] before:text-foreground before:text-lg before:font-medium;
+}
+
+.toc-item {
+  @apply ml-6 list-disc text-sm leading-loose;
+}
+
+.toc-link {
+  @apply underline text-muted-foreground hover:text-foreground;
+}
