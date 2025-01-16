@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react'
 import { cn } from '@/lib/utils'
 import type { MarkdownHeading } from 'astro'
 
@@ -8,6 +9,31 @@ interface SideTocProps {
 
 export default function SideToc(props: SideTocProps) {
   const { headings, className } = props
+
+  const [activeId, setActiveId] = useState<string>('')
+
+  // 添加滚动监听
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            setActiveId(entry.target.id)
+          }
+        })
+      },
+      { rootMargin: '-100px 0% -66%' }
+    )
+
+    // 观察所有标题元素
+    headings.forEach((heading) => {
+      const element = document.getElementById(heading.slug)
+      if (element) observer.observe(element)
+    })
+
+    return () => observer.disconnect()
+  }, [headings])
+
   return (
     <nav
       className={cn(
@@ -27,7 +53,10 @@ export default function SideToc(props: SideTocProps) {
               >
                 <a
                   href={`#${heading.slug}`}
-                  className='text-muted-foreground hover:text-foreground'
+                  className={cn(
+                    'text-muted-foreground hover:text-foreground',
+                    activeId === heading.slug && 'text-foreground'
+                  )}
                 >
                   {heading.text}
                 </a>
