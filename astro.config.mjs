@@ -14,11 +14,11 @@ export default defineConfig({
   },
   site: 'https://thetrees.studio',
   integrations: [
+    react(),
     mdx({
       remarkPlugins: [[remarkToc, { tight: true, ordered: false }]],
       rehypePlugins: [rehypeSlug]
     }),
-    react(),
     tailwind({ applyBaseStyles: false })
   ],
   experimental: {

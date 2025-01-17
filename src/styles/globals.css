@@ -1,6 +1,7 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
 @layer base {
   :root {
     --background: 0 0% 100%;
@@ -60,7 +61,7 @@
 @layer base {
   @font-face {
     font-family: 'JetBrains Mono';
-    src: url('/JetBrainsMono[wght].ttf') format('truetype');
+    src: url('/fonts/JetBrainsMono[wght].ttf') format('truetype');
     font-style: normal;
   }
 
@@ -68,21 +69,7 @@
     @apply border-border;
   }
   body {
-    font-family: 'JetBrains Mono', monospace;
+    font-family: 'JetBrains Mono', monospace, sans-serif;
     @apply bg-background text-foreground;
   }
-}
-
-.toc {
-  @apply xl:hidden;
-  @apply p-4 mb-6 rounded-xl border;
-  @apply before:block before:mb-2 before:content-["目录"] before:text-foreground before:text-lg before:font-medium;
-}
-
-.toc-item {
-  @apply ml-6 list-disc text-sm leading-loose;
-}
-
-.toc-link {
-  @apply underline text-muted-foreground hover:text-foreground;
 }

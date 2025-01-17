@@ -1,16 +1,14 @@
 ---
+import { cn } from '@/lib/utils'
 import { Image } from 'astro:assets'
 import Layout from '@/layouts/Layout.astro'
 import HomeCard from '@/components/home-card.astro'
 import LinkButton from '@/components/home-link-button'
 
-import homeCard0Bg from '@/assets/home_card_0_bg.png'
-import homeCard2Bg from '@/assets/home_card_2_bg.png'
 import mascot from '@/assets/mascot_0.png'
 import mascot1withCode from '@/assets/mascot_1_with_code.png'
 import mascot2 from '@/assets/mascot_2.png'
 import githubMark from '@/assets/github_mark.svg'
-import logoTileBg from '@/assets/logo_tile_bg.png'
 ---
 
 <Layout title='Home' description='我深爱追逐你的那个自己'>
@@ -18,15 +16,11 @@ import logoTileBg from '@/assets/logo_tile_bg.png'
     class='px-5 max-w-[375px] md:max-w-screen-md mx-auto grid grid-cols-1 md:grid-cols-3 md:grid-rows-2 gap-4'
   >
     <HomeCard
-      className='aspect-square md:aspect-auto md:h-full md:col-span-2 md:row-span-1 relative'
+      className={cn(
+        'aspect-square md:aspect-auto md:h-full md:col-span-2 md:row-span-1 relative',
+        `bg-[url('/images/home_card_0_bg.png')] bg-no-repeat bg-cover bg-center`
+      )}
     >
-      <Image
-        src={homeCard0Bg}
-        alt='Home Card 0 Background'
-        class='absolute inset-0 w-full h-full object-cover'
-        priority={true}
-        loading='eager'
-      />
       <div
         class='absolute top-4 left-4 right-4 p-4 border rounded-2xl bg-background text-sm'
       >
@@ -64,15 +58,11 @@ import logoTileBg from '@/assets/logo_tile_bg.png'
       />
     </HomeCard>
     <HomeCard
-      className='aspect-square md:aspect-auto md:h-full md:col-start-2 md:col-span-2 md:row-start-2 relative'
+      className={cn(
+        'aspect-square md:aspect-auto md:h-full md:col-start-2 md:col-span-2 md:row-start-2 relative',
+        `bg-[url('/images/home_card_2_bg.png')] bg-no-repeat bg-cover bg-center`
+      )}
     >
-      <Image
-        src={homeCard2Bg}
-        alt='Home Card 2 Background'
-        class='absolute inset-0 w-full h-full object-cover'
-        priority={true}
-        loading='eager'
-      />
       <div
         class='absolute top-4 left-4 right-4 p-4 border rounded-2xl bg-background text-sm'
       >
@@ -87,15 +77,10 @@ import logoTileBg from '@/assets/logo_tile_bg.png'
       />
     </HomeCard>
     <HomeCard
-      className='aspect-square md:col-start-1 md:col-span-1 md:row-start-2 relative'
-    >
-      <Image
-        src={logoTileBg}
-        alt='Logo Tile Background'
-        class='absolute inset-0 w-full h-full object-cover'
-        priority={true}
-        loading='eager'
-      />
-    </HomeCard>
+      className={cn(
+        'aspect-square md:col-start-1 md:col-span-1 md:row-start-2 relative',
+        `bg-[url('/images/logo_tile_bg.png')] bg-no-repeat bg-cover bg-center`
+      )}
+    />
   </div>
 </Layout>
