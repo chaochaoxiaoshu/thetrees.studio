@@ -23,7 +23,7 @@ export default function PostNavigation(props: PostNavigationProps) {
             <ArrowLeft className='flex-none' />
             <div className='flex-auto flex flex-col gap-2'>
               <span className='text-xs text-muted-foreground'>上一篇</span>
-              <span className='text-ellipsis text-pretty text-left text-sm'>
+              <span className='text-ellipsis text-left text-sm text-wrap'>
                 {previousPost?.title ?? '无'}
               </span>
             </div>
@@ -39,7 +39,7 @@ export default function PostNavigation(props: PostNavigationProps) {
           <a href={`/blog/${nextPost?.slug}`}>
             <div className='flex-auto flex flex-col items-end gap-1.5'>
               <span className='text-xs text-muted-foreground'>下一篇</span>
-              <span className='text-ellipsis text-pretty text-left text-sm'>
+              <span className='text-ellipsis text-left text-sm text-wrap'>
                 {nextPost?.title ?? '无'}
               </span>
             </div>

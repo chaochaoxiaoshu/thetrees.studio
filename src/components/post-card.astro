@@ -19,7 +19,9 @@ const { post } = Astro.props
     className='shadow-none md:hover:bg-muted/60 transition-colors duration-300'
   >
     <article class='flex flex-col md:flex-row gap-4 p-4'>
-      <div class='relative aspect-video w-full max-w-[275px] md:flex-shrink-0'>
+      <div
+        class='relative aspect-video w-full max-w-[375px] md:max-w-[275px] md:flex-shrink-0'
+      >
         <Image
           src={post.cover}
           alt={post.title}

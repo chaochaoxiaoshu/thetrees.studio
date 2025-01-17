@@ -21,19 +21,19 @@ import {
 import { Home, BookOpen } from 'lucide-astro'
 
 export async function getStaticPaths() {
-  const posts = await getCollection('blog')
+  const posts = await getCollection('blog', ({ data }) => !data.draft)
   const sortedPosts = posts.sort((a, b) => {
     return b.data.date.getTime() - a.data.date.getTime()
   })
   return sortedPosts.map(post => {
     const postIndex = sortedPosts.indexOf(post)
     const prevPost = (() => {
-      if (postIndex <= 0) return null
-      return sortedPosts.at(postIndex - 1)?.data ?? null
-    })()
-    const nextPost = (() => {
       if (postIndex >= sortedPosts.length - 1) return null
       return sortedPosts.at(postIndex + 1)?.data ?? null
+    })()
+    const nextPost = (() => {
+      if (postIndex <= 0) return null
+      return sortedPosts.at(postIndex - 1)?.data ?? null
     })()
     return {
       params: { slug: post.data.slug },

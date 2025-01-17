@@ -18,8 +18,11 @@ export async function getStaticPaths({
 }: {
   paginate: PaginateFunction
 }) {
-  const posts = await getCollection('blog')
-  return paginate(posts, { pageSize: 10 })
+  const posts = await getCollection('blog', ({ data }) => !data.draft)
+  const sortedPosts = posts.sort(
+    (a, b) => b.data.date.getTime() - a.data.date.getTime()
+  )
+  return paginate(sortedPosts, { pageSize: 10 })
 }
 
 const { page } = Astro.props
