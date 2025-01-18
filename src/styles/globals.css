@@ -69,7 +69,7 @@
     @apply border-border;
   }
   body {
-    font-family: 'JetBrains Mono', monospace, sans-serif;
+    font-family: 'JetBrains Mono', -apple-system, 'PingFang SC', 'Microsoft YaHei', 'Segoe UI', sans-serif;
     @apply bg-background text-foreground;
   }
 }
