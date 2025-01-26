@@ -21,7 +21,12 @@ import {
 import { Home, BookOpen } from 'lucide-astro'
 
 export async function getStaticPaths() {
-  const posts = await getCollection('blog', ({ data }) => !data.draft)
+  const posts = await getCollection('blog', ({ data }) => {
+    if (process.env.NODE_ENV === 'development') {
+      return true
+    }
+    return !data.draft
+  })
   const sortedPosts = posts.sort((a, b) => {
     return b.data.date.getTime() - a.data.date.getTime()
   })
@@ -118,7 +123,7 @@ const { Content, headings } = await render(post)
     <Toc client:load className='col-start-2 px-5' headings={headings} />
     <SideToc client:load className='col-start-1' headings={headings} />
     <article
-      class='col-start-2 prose prose-sm md:prose-base max-w-none dark:prose-invert prose-zinc prose-code:text-xs md:prose-code:text-sm prose-inline-code:before:content-[""] prose-inline-code:after:content-[""] prose-inline-code:text-xs md:prose-inline-code:text-sm prose-inline-code:font-normal prose-inline-code:px-1.5 prose-inline-code:py-1 prose-inline-code:bg-muted prose-inline-code:rounded-md prose-a:mx-1.5 prose-a:text-[#B2E6C8] prose-headings:scroll-mt-20 [&>:first-child>*]:mt-0'
+      class='col-start-2 prose prose-sm md:prose-base max-w-none dark:prose-invert prose-zinc prose-code:font-mono prose-code:text-xs md:prose-code:text-sm prose-inline-code:before:content-[""] prose-inline-code:after:content-[""] prose-inline-code:text-xs md:prose-inline-code:text-sm prose-inline-code:font-normal prose-inline-code:px-1.5 prose-inline-code:py-1 prose-inline-code:bg-muted prose-inline-code:rounded-md prose-a:mx-1.5 prose-a:text-[#B2E6C8] prose-headings:scroll-mt-20 [&>:first-child>*]:mt-0'
     >
       <Content />
     </article>

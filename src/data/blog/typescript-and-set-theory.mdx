@@ -1,7 +1,7 @@
 ---
 cover: 'https://cdn.thetrees.studio/posts/typescript-and-set-theory/cover.png'
 title: 'TS[01]: TypeScript 与集合论'
-description: ''
+description: 'TypeScript 的类型体操简直像是符文魔法，为了硬着头皮研究这种魔法，我们需要一种符合其心智模型的推理工具。'
 slug: 'typescript-and-set-theory'
 date: 2025-01-16
 tags: ['TypeScript']
@@ -10,3 +10,272 @@ draft: true
 
 import { Image } from 'astro:assets'
 import Latex from '@/components/latex.astro'
+import Callout from '@/components/callout.astro'
+
+## 将 TypeScript 类型看作集合
+
+JavaScript 中有 `Number`, `String`, `Boolean`, `Null`, `Undefined` ... 等数据类型。
+
+想象一下，在 TypeScript 中，每种类型都是包含若干个元素的集合：
+
+- `number` 类型是包含所有数字的无限集
+- `string` 类型是包含所有可能的字符排列组合的无限集
+- `boolean` 类型是包含 `true` 和 `false` 两个元素的有限集
+- `null` 类型是包含 `null` 一个元素的有限集
+- `undefined` 类型是包含 `undefined` 一个元素的有限集
+
+...
+
+<Image
+  src='https://cdn.thetrees.studio/posts/typescript-and-set-theory/types_sets.png'
+  alt='类型集合'
+  inferSize
+/>
+
+这是最基本的，但 TypeScript 中的类型可远不止 JavaScript 中定义的数据类型，通过创建**联合类型**，我们可以指定类型（集合）中应当包含哪些元素：
+
+```ts
+type U = 1 | 2 | 3
+type V = string | number
+```
+
+在这个例子中，类型 U 相当于一个包含数字元素 1、2、3 的有限集，类型 V 相当于包含所有字符串与数字的无限集。
+
+这是 TypeScript 的类型系统最令人着迷的原因，类型之间可以合并、相交、映射...，进行各种复杂的运算和变换，得到新的类型。TypeScript 的**泛型**打开了类型运算的入口，它允许将类型作为参数传入。
+
+假设有一个 JS 函数，计算两数之和：
+
+```js
+const add = (x, y) => x + y
+```
+
+与之对应的 TS 类型运算是：
+
+```ts
+type Add<T, U> = T | U
+```
+
+`Add` 就像一个用于计算类型的函数，区别仅仅是 `add` 返回一个**值**，而 `Add` 返回一个**类型**。
+
+我们在开发实践中遇到过很多充分利用类型运算来提升开发体验的库 / 框架，比如：
+
+- [Prisma](https://www.prisma.io)是 node.js 生态系统中的一个 orm 库，它通过 schema 文件中的定义来生成类型安全的 Prisma Client：
+
+```prisma
+// schema.prisma
+
+model User {
+  id    Int    @id @default(autoincrement())
+  name  String
+  email String @unique
+}
+```
+
+```ts
+prisma.user.create({
+  data: {
+    name: '朝小树',
+    email: 12345 // TypeScript 错误：12345 不是 'string'
+  }
+})
+```
+
+- [Elysia](https://elysiajs.com)是一个基于[Bun](https://bun.sh/docs)的后端框架，它可以通过定义路由的字符串推断出参数的类型：
+
+```ts
+import { Elysia } from 'elysia'
+
+// /id/:id 路由段的参数被推断为：{ id: string } 类型
+new Elysia().get('/id/:id', ({ params: { id } }) => id).listen(3000)
+```
+
+这样的例子不胜枚举，但当我们想打开引擎盖看看这一切是如何发生的时...
+
+```ts
+// 我们得到了这个（截取了 Elysia 类型定义中的一小段）：
+
+export type Reconcile<
+  A extends Object,
+  B extends Object,
+  Override extends boolean = false,
+  // Detect Stack limit, eg. circular dependency
+  Stack extends number[] = []
+> = Stack['length'] extends 16
+  ? A
+  : Override extends true
+  ? {
+      [key in keyof A as key extends keyof B ? never : key]: A[key]
+    } extends infer Collision
+    ? {} extends Collision
+      ? {
+          [key in keyof B]: IsBothObject<
+            // @ts-ignore trust me bro
+            A[key],
+            B[key]
+          > extends true
+            ? Reconcile<
+                // @ts-ignore trust me bro
+                A[key],
+                B[key],
+                Override,
+                [0, ...Stack]
+              >
+            : B[key]
+        }
+      : Prettify<
+          Collision & {
+            [key in keyof B]: B[key]
+          }
+        >
+    : never
+  : {
+      [key in keyof B as key extends keyof A ? never : key]: B[key]
+    } extends infer Collision
+  ? {} extends Collision
+    ? {
+        [key in keyof A]: IsBothObject<
+          A[key],
+          // @ts-ignore trust me bro
+          B[key]
+        > extends true
+          ? Reconcile<
+              // @ts-ignore trust me bro
+              A[key],
+              // @ts-ignore trust me bro
+              B[key],
+              Override,
+              [0, ...Stack]
+            >
+          : A[key]
+      }
+    : Prettify<
+        {
+          [key in keyof A]: A[key]
+        } & Collision
+      >
+  : never
+```
+
+这简直就像是符文魔法！！似乎完全无从下手。但真的想硬着头皮研习这种魔法时，我们需要一种工具来帮助我们推理这些类型运算，**集合**刚好就符合 TypeScript 的心智模型，这就是我们把 TypeScript 类型看作集合的原因。
+
+## 集合运算与类型运算
+
+我们可以通过以下集合运算来计算出新的集合：
+
+- 求并集。A 与 B 的并集是至少存在于 A 或 B 的所有元素的集合
+- 求交集。A 与 B 的交集是同时存在于 A 与 B 的所有元素的集合
+- 求差集。A 减去 B 的差集是存在于 A 但不存在于 B 的所有元素的集合
+- 求补集。A 的补集是 U 中所有不存在于 A 的所有元素的集合
+
+<Latex formula='A \cup B = \{ x \mid x \in A \text{ 或 } x \in B \}' />
+
+<Latex formula='A \cap B = \{ x \mid x \in A \text{ 且 } x \in B \}' />
+
+<Latex formula='A - B = \{ x \mid x \in A \text{ 且 } x \notin B \}' />
+
+<Latex formula='A^c = \{ x \mid x \in U \text{ 且 } x \notin A \}' />
+
+四种集合运算，TypeScript 为我们提供了两个类型运算符：`|` 运算符用于求并集；`&` 运算符用于求交集。
+
+对于简单类型的求并集和交集的运算，一切都符合我们的预期：
+
+```ts
+type A = 1 | 2 | 3
+type B = 2 | 3 | 4
+
+type C = A | B // 1 | 2 | 3 | 4
+type D = A & B // 2 | 3
+```
+
+但对两个 `interface` 求并集或交集时，情况似乎变得有些违反直觉：
+
+```ts
+interface A {
+  a: string
+  c: boolean
+}
+
+interface B {
+  b: number
+  c: boolean
+}
+
+type C = A | B
+```
+
+A 并 B，得出的结果是：
+
+```ts
+type C = {
+  c: boolean
+}
+```
+
+What??? 这似乎有些抽象，但不妨从集合的角度理解一下：
+
+一个空接口：`{}`，相当于任何 `interface` 的父级，它没有任何约束条件，任何形状的 JavaScript 对象都可以赋值给它：
+
+```ts
+interface A {}
+
+const a: A = {
+  a: 123,
+  b: 'abc',
+  c: Symbol('Hello World')
+}
+
+const b: A = {
+  d: true,
+  e: undefined,
+  f: 233333
+}
+```
+
+每当我们向 `interface` 中添加一个属性，就相当于为集合添加了一个筛选条件，我们添加的属性越多，符合集合筛选条件的元素就越少：
+
+// 一个图，表示添加属性之后圈变小了
+
+而两个集合求并集时，最终应该得出一个比两个集合都更大的集合：
+
+// 一张图，表示求并集
+
+那么它的约束条件应该减少才对。现在回过头来看，A 并 B 的结果，拥有的属性比 A 和 B 都更少，这正是我们期望的结果。
+
+同样的，A 与 B 求交集，最终应当得出一个约束条件更多的集合，因此 A 交 B 的结果中的属性比 A 和 B 都更多。
+
+## 类型的可分配性
+
+在进行赋值操作时，能否通过类型检查，取决于等号右边的值的类型，和等号左边的变量的类型。将 a 值赋予 b 变量，要想赋值成功，**a 的类型必须是 b 的类型的子集**：
+
+```ts
+const a = 'apple' // 由于 a 是常量，a 的类型被推断为 'apple' 而不是 string
+let b: string
+
+b = a // 可以，因为 'apple' 是 string 的子集
+```
+
+```ts
+const a = 'red'
+let b: 'blue' | 'yellow' | 'white'
+
+b = a // 不可以，'red' 不是 'blue' | 'yellow' | 'white' 的子集
+```
+
+当等号右边的值的类型是等号左边变量的类型的父集，或者两个集合不相交时，TypeScript 会抛出错误。
+
+---
+
+TypeScript 有两种特殊的类型：`unknown` 和 `never`，从字面意思上看，`unknown` 表示“不知道是什么值”，`never` 表示“永远不可能有值”，这很容易让人感到困惑：我应该在什么时候使用 `unknown` 和 `never` 类型？
+
+在集合中，这两个概念要好理解得多。`never` 相当于集合中的**空集**，即没有任何元素的集合。`unknown` 相当于全集，包含所有元素的集合。
+
+因此在 TypeScript 中：
+
+- `never` 可以被分配给任何类型，因为空集是任何集合的子集；但没有任何类型可以分配给 `never`，因为没有集合是空集的子集
+- 任何类型都可以分配给 `unknown`，因为任何集合都是全集的子集；而 `unknown` 不可以被分配给任何类型，因为全集不是任何集合的子集
+
+<Callout type='info'>
+  等一下，那 `any` 呢？事实上，`any` 在集合中找不到任何与之对应的概念，就像
+  React 的 `useEffect` 一样，`any` 是 TypeScript 类型系统中用于回到 JavaScript
+  的逃生舱口。
+</Callout>
