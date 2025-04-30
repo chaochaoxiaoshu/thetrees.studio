@@ -9,7 +9,7 @@ import rehypeSlug from 'rehype-slug'
 // https://astro.build/config
 export default defineConfig({
   prefetch: {
-    prefetchAll: true,
+    prefetchAll: false, // Reduced to save resources
     defaultStrategy: 'viewport'
   },
   site: 'https://thetrees.studio',
@@ -23,6 +23,29 @@ export default defineConfig({
   ],
   experimental: {
     svg: true
+  },
+  build: {
+    // Serialize build steps to reduce concurrent operations
+    inlineStylesheets: 'never'
+  },
+  vite: {
+    // Optimize Vite build for resource-constrained environments
+    build: {
+      // Use a single chunk where possible
+      cssCodeSplit: false,
+      // Reduce Rollup's concurrency
+      rollupOptions: {
+        maxParallelFileOps: 1,
+        // Bundle common deps to reduce file operations
+        output: {
+          manualChunks: undefined
+        }
+      }
+    },
+    optimizeDeps: {
+      // Disable scanning to reduce file operations
+      entries: []
+    }
   },
   markdown: {
     shikiConfig: {
