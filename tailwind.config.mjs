@@ -10,6 +10,10 @@ export default {
       fontFamily: {
         mono: [
           'JetBrains Mono',
+          'PingFang SC',
+          'Microsoft YaHei',
+          'Noto Sans CJK SC',
+          'WenQuanYi Micro Hei',
           'monospace',
           'sans-serif',
           ...defaultTheme.fontFamily.mono
