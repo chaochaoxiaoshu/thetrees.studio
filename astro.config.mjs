@@ -2,9 +2,9 @@
 import { defineConfig } from 'astro/config'
 import mdx from '@astrojs/mdx'
 import react from '@astrojs/react'
-import tailwind from '@astrojs/tailwind'
 import remarkToc from 'remark-toc'
 import rehypeSlug from 'rehype-slug'
+import tailwindcss from '@tailwindcss/vite'
 
 // https://astro.build/config
 export default defineConfig({
@@ -15,8 +15,7 @@ export default defineConfig({
     mdx({
       remarkPlugins: [[remarkToc, { tight: true, ordered: false }]],
       rehypePlugins: [rehypeSlug]
-    }),
-    tailwind({ applyBaseStyles: false })
+    })
   ],
   experimental: {
     fonts: [
@@ -52,11 +51,14 @@ export default defineConfig({
         {
           pre: (node) => {
             node.properties.style =
-              'background-color:hsl(var(--muted));color:#e1e4e8;overflow-x:auto'
+              'background-color:var(--muted);color:#e1e4e8;overflow-x:auto'
             node.properties.tabindex = undefined
           }
         }
       ]
     }
+  },
+  vite: {
+    plugins: [tailwindcss()]
   }
 })
