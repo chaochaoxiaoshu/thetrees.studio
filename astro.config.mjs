@@ -8,10 +8,7 @@ import rehypeSlug from 'rehype-slug'
 
 // https://astro.build/config
 export default defineConfig({
-  prefetch: {
-    prefetchAll: false, // Reduced to save resources
-    defaultStrategy: 'viewport'
-  },
+  prefetch: true,
   site: 'https://thetrees.studio',
   integrations: [
     react(),
@@ -22,30 +19,32 @@ export default defineConfig({
     tailwind({ applyBaseStyles: false })
   ],
   experimental: {
-    svg: true
-  },
-  build: {
-    // Serialize build steps to reduce concurrent operations
-    inlineStylesheets: 'never'
-  },
-  vite: {
-    // Optimize Vite build for resource-constrained environments
-    build: {
-      // Use a single chunk where possible
-      cssCodeSplit: false,
-      // Reduce Rollup's concurrency
-      rollupOptions: {
-        maxParallelFileOps: 1,
-        // Bundle common deps to reduce file operations
-        output: {
-          manualChunks: undefined
-        }
+    fonts: [
+      {
+        provider: 'local',
+        name: 'MapleMono',
+        cssVariable: '--font-maple-mono',
+        variants: [
+          {
+            style: 'normal',
+            weight: '100 900',
+            src: ['./src/assets/fonts/MapleMono[wght].ttf']
+          },
+          {
+            style: 'italic',
+            weight: '100 900',
+            src: ['./src/assets/fonts/MapleMono-Italic[wght].ttf']
+          }
+        ],
+        fallbacks: [
+          'PingFang SC',
+          'Microsoft YaHei',
+          'Noto Sans CJK SC',
+          'WenQuanYi Micro Hei',
+          'sans-serif'
+        ]
       }
-    },
-    optimizeDeps: {
-      // Disable scanning to reduce file operations
-      entries: []
-    }
+    ]
   },
   markdown: {
     shikiConfig: {

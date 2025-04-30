@@ -1,5 +1,6 @@
 ---
 import { SEO } from 'astro-seo'
+import { Font } from 'astro:assets'
 import Header from '@/components/header'
 import Footer from '@/components/footer.astro'
 
@@ -35,6 +36,7 @@ const { title, description } = Astro.props
         ]
       }}
     />
+    <Font cssVariable="--font-maple-mono" preload />
   </head>
   <body class='dark'>
     <main class='space-y-6'>

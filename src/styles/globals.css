@@ -59,16 +59,21 @@
 }
 
 @layer base {
-  @font-face {
-    font-family: 'JetBrains Mono';
-    src: url('/fonts/JetBrainsMono[wght].ttf') format('truetype');
-    font-style: normal;
-  }
-
   * {
     @apply border-border;
   }
   body {
     @apply bg-background text-foreground font-mono;
+  }
+}
+
+
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
   }
 }
